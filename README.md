@@ -31,12 +31,13 @@ Abre una **terminal de Windows (CMD o PowerShell)** dentro de la carpeta del pro
 
 ```bash
 python -m venv .venv
+```
 
 ### 📁 Paso 2. Activar el entorno virtual
 
 ```bash
 .venv\Scripts\activate
-
+```
 
 Si la activación fue correcta, verás algo así en la terminal:
 (.venv) C:\Users\Jhoan\Proyecto_Teoria_Colas>
@@ -51,8 +52,10 @@ matplotlib==3.9.2
 seaborn==0.13.2
 scipy==1.14.1
 openpyxl==3.1.5
+```
 
 Luego, con el entorno virtual activado, instala las librerías:
 
 ```bash
 pip install -r requirements.txt
+```
