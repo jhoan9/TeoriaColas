@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 import sys
+from datetime import datetime
 
 # -------------------------------
 # 1. Cargar los datos
@@ -151,5 +152,71 @@ tabla_final = pd.concat([
     tabla_servicio.assign(Tipo='Servicio')
 ])
 
-tabla_final.to_excel("bondad_ajuste_frisby.xlsx", index=False)
-print("\n📊 Archivo 'bondad_ajuste_frisby.xlsx' generado con los resultados.")
+def guardar_excel_con_fallback(df_out: pd.DataFrame, nombre_base: str) -> str:
+    try:
+        df_out.to_excel(nombre_base, index=False)
+        print(f"\nArchivo '{nombre_base}' generado con los resultados.")
+        return nombre_base
+    except PermissionError:
+        # Si está abierto en Excel, escribir con sufijo de timestamp
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        nombre_alt = f"{Path(nombre_base).stem}_{ts}{Path(nombre_base).suffix}"
+        df_out.to_excel(nombre_alt, index=False)
+        print(f"\nNo se pudo escribir '{nombre_base}' (¿abierto en Excel?). Se guardó como '{nombre_alt}'.")
+        return nombre_alt
+
+guardar_excel_con_fallback(tabla_final, "bondad_ajuste_frisby.xlsx")
+
+# -------------------------------
+# 5. Exportar tabla resumen con evaluación
+# -------------------------------
+
+def evaluar_fila(row):
+    # Decisión basada en p-value
+    if row['K-S (p)'] > 0.05:
+        decision = "✅ Se acepta"
+    else:
+        decision = "❌ Se descarta"
+    return decision
+
+def letra_notacion(distribucion):
+    if distribucion == 'Exponencial':
+        return 'M'
+    elif distribucion in ['Gamma', 'Lognormal', 'Weibull']:
+        return 'G'
+    elif distribucion == 'Normal':
+        return 'N'
+    else:
+        return 'D'
+
+# Unimos ambas tablas
+tabla_final = pd.concat([
+    tabla_llegadas.assign(Tipo='Tiempos entre llegadas'),
+    tabla_servicio.assign(Tipo='Tiempos de servicio')
+])
+
+# Asignar evaluación visual automática según p-value
+def eval_visual(p):
+    if p >= 0.9:
+        return "Excelente"
+    elif p >= 0.5:
+        return "Bueno"
+    elif p >= 0.2:
+        return "Aceptable"
+    elif p >= 0.05:
+        return "Regular"
+    else:
+        return "Malo"
+
+tabla_final['Evaluación Visual'] = tabla_final['K-S (p)'].apply(eval_visual)
+
+# Agregar decisión final y letra notación
+tabla_final['Decisión Final'] = tabla_final.apply(evaluar_fila, axis=1)
+tabla_final['Letra Notación'] = tabla_final['Distribución'].apply(letra_notacion)
+
+# Reordenar columnas
+tabla_final = tabla_final[['Tipo', 'Distribución', 'K-S (p)', 'A-D (stat)',
+                           'Evaluación Visual', 'Decisión Final', 'Letra Notación']]
+
+# Guardar resultado
+guardar_excel_con_fallback(tabla_final, "bondad_ajuste_frisby.xlsx")
